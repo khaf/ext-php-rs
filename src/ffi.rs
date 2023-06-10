@@ -26,6 +26,13 @@ extern "C" {
     pub fn ext_php_rs_zend_object_alloc(obj_size: usize, ce: *mut zend_class_entry) -> *mut c_void;
     pub fn ext_php_rs_zend_object_release(obj: *mut zend_object);
     pub fn ext_php_rs_executor_globals() -> *mut zend_executor_globals;
+
+    pub fn ext_php_rs_zend_persist_value(
+        zs: *const zend_string,
+        zv: *mut zval,
+        zvt: isize,
+    ) -> *mut zend_resource;
+    pub fn ext_php_rs_zend_fetch_persisted_value(zs: *const zend_string) -> *mut zval;
 }
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));

@@ -11,7 +11,8 @@ use crate::{
     convert::{FromZval, FromZvalMut, IntoZval, IntoZvalDyn},
     error::{Error, Result},
     ffi::{
-        _zval_struct__bindgen_ty_1, _zval_struct__bindgen_ty_2, zend_is_callable,
+        _zval_struct__bindgen_ty_1, _zval_struct__bindgen_ty_2,
+        ext_php_rs_zend_fetch_persisted_value, ext_php_rs_zend_persist_value, zend_is_callable,
         zend_is_identical, zend_resource, zend_value, zval, zval_ptr_dtor,
     },
     flags::DataType,
@@ -46,6 +47,20 @@ impl Zval {
                 type_info: DataType::Null.as_u32(),
             },
             u2: _zval_struct__bindgen_ty_2 { next: 0 },
+        }
+    }
+
+    /// Retrieves a value that was previously registered in PHP's persistence via the
+    /// `Zval::persist` method.
+    ///
+    /// Returns a reference to the Zval if the key was found in the list.
+    pub fn from_persistence(key: &str) -> Option<&Self> {
+        unsafe {
+            let mut key = ZendStr::new(key, false);
+            let pv: *mut Zval = ext_php_rs_zend_fetch_persisted_value(key.as_ptr());
+
+            // SAFETY: `as_ref` checks for null.
+            Some(pv.as_ref()?)
         }
     }
 
@@ -562,6 +577,29 @@ impl Zval {
         }
 
         new
+    }
+
+    /// Persists the value in PHP's persistence list.
+    ///
+    /// This uses the PHP persistence API to preserve a value between sessions.
+    /// The value can later retrieved via `Zval::from_persistence` method.
+    pub fn persist(self, key: &str) -> Result<()> {
+        let key = ZendStr::new(key, true);
+        let ty = self.get_type().as_u32();
+
+        unsafe {
+            let res = ext_php_rs_zend_persist_value(
+                key.as_ptr(),
+                Box::into_raw(Box::new(self)),
+                ty as isize,
+            )
+            .as_ref();
+
+            match res {
+                Some(_) => Ok(()),
+                None => Result::Err(Error::InvalidPointer),
+            }
+        }
     }
 }
 

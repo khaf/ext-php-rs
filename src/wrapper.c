@@ -28,6 +28,19 @@ void ext_php_rs_zend_object_release(zend_object *obj) {
   zend_object_release(obj);
 }
 
+zval *ext_php_rs_zend_fetch_persisted_value(zend_string *key) {
+    zend_resource *le;
+    if ((le = zend_hash_find_ptr(&EG(persistent_list), key))) {
+        return (zval *)(le->ptr);
+    }
+    return NULL;
+}
+
+zend_resource *ext_php_rs_zend_persist_value(zend_string *key, zval *value, int zval_type) {
+  return zend_register_persistent_resource_ex(key, value, zval_type);
+}
+
+
 zend_executor_globals *ext_php_rs_executor_globals() {
 #ifdef ZTS
 #ifdef ZEND_ENABLE_STATIC_TSRMLS_CACHE
